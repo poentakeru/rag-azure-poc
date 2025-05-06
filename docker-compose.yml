@@ -1,0 +1,49 @@
+version: "3.8"
+services:
+  retriever:
+    build:
+      context: ./retriever
+      dockerfile: Dockerfile
+    platform: linux/amd64 # Mac(Mチップ)とAzureの両対応
+    ports:
+      - "8001:8001"
+
+  generator:
+    build:
+      context: ./generator
+      dockerfile: Dockerfile
+    platform: linux/amd64
+    ports:
+      - "8002:8002" 
+
+  vector-db:
+      build:
+        context: ./vector-db
+        dockerfile: Dockerfile
+      platform: linux/amd64 # Mac(Mチップ)とAzureの両対応
+      ports:
+        - "8003:8003"
+      container_name: vector-db
+  
+  controller:
+      build:
+        context: ./controller
+        dockerfile: Dockerfile
+      platform: linux/amd64 # Mac(Mチップ)とAzureの両対応
+      ports:
+        - "8004:8004"
+      container_name: controller
+      depends_on:
+        - retriever
+        - generator
+  ui:
+    build:
+      context: ./ui
+      dockerfile: Dockerfile
+    platform: linux/amd64
+    ports:
+      - "8501:8501"
+    container_name: ui
+    depends_on:
+      - controller
+    
