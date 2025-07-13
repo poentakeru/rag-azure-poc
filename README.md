@@ -23,6 +23,7 @@
 | `generator`  | クエリ＋文脈から回答を生成        | 8002   |
 | `vector-db`  | ベクトル登録・検索（FAISS等想定） | 8003   |
 | `controller` | 全体制御API。retriever→generator連携 | 8004   |
+| `ingestor`   | 文書の取り込み                       | 8005 |
 | `ui`         | Streamlitによる問い合わせUI       | 8501   |
 
 ---
@@ -68,10 +69,81 @@ curl -X POST http://localhost:8004/ask \
 rag-azure-poc/
 ├── retriever/
 ├── generator/
+├── ingestor/
 ├── vector-db/
 ├── controller/
 ├── ui/
 ├── docker-compose.yml
+├── sample_document.pdf # 横浜市のゴミ出しガイドブックです。RAGに投入するサンプル文書として
 └── README.md
 ```
 ---
+## 📐 アーキテクチャ構成図（Mermaid）
+
+```mermaid
+graph TD
+    subgraph UI層
+        UI[Streamlit UI]
+    end
+
+    subgraph Backend API群
+        Controller[Controller<br>/ask]
+        Retriever[Retriever<br>/search]
+        Generator[Generator<br>/generate]
+        VectorDB[(Vector DB<br>FAISS)]
+        Ingestor[Ingestor<br>/upload]
+    end
+
+    %% クエリ処理の流れ
+    UI -->|query + llm| Controller
+    Controller -->|query| Retriever
+    Retriever -->|chunk list| Controller
+    Controller -->|query + context + llm| Generator
+    Generator -->|answer| Controller
+    Controller -->|answer| UI
+
+    %% アップロード処理の流れ
+    UI -->|ファイル送信| Ingestor
+    Ingestor -->|チャンク + ベクトル| VectorDB
+
+    %% Retrieverとのやりとり
+    Retriever -->|検索| VectorDB
+```
+---
+## 📤 コンテナ間のAPI仕様まとめ表（Mini OpenAPI風）
+
+| From       | To         | Method | Path        | Request JSON                                          | Response JSON                           |
+| ---------- | ---------- | ------ | ----------- | ----------------------------------------------------- | --------------------------------------- |
+| UI         | Controller | POST   | `/ask`      | `{"query": "...", "llm": "gemini"}`                   | `{"answer": "..."}`                     |
+| Controller | Retriever  | POST   | `/search`   | `{"query": "..."}`                                    | `{"chunks": [...]}`                     |
+| Controller | Generator  | POST   | `/generate` | `{"query": "...", "context": "...", "llm": "gemini"}` | `{"answer": "..."}`                     |
+| UI         | Ingestor   | POST   | `/upload`   | multipart file                                        | `{"filename": "...", "message": "..."}` |
+
+---
+## 🧱 コンテナ機能一覧表
+
+| コンテナ         | ポート  | 役割               | 主なエンドポイント   |
+| ------------ | ---- | ---------------- | ----------- |
+| `ui`         | 8501 | ユーザー向けUI         | -           |
+| `controller` | 8004 | ルーティングと統合処理      | `/ask`      |
+| `retriever`  | 8001 | チャンク検索           | `/search`   |
+| `generator`  | 8002 | 回答生成（LLM切替対応）    | `/generate` |
+| `vector-db`  | 8003 | ベクトル格納・検索（FAISS） | 内部利用        |
+| `ingester`   | 8005 | ファイルアップロード＋整形    | `/upload`   |
+
+## 🔐 .env ファイルの取り扱い
+このプロジェクトでは、APIキーやトークンなどの機密情報を .env ファイルで管理しています。
+
+- env は セキュリティ上の理由で Git 管理から除外されています。
+- .gitignore に以下のように記述されています：
+
+```text
+# 環境変数ファイル（機密情報）
+*.env
+```
+代わりに、雛形として .env.example をプロジェクトに含めています。
+
+```text
+# .env.example の例
+GOOGLE_API_KEY=your_api_key_here
+```

@@ -6,6 +6,7 @@ app = FastAPI()
 
 class AskRequest(BaseModel):
     query: str
+    llm: str
 
 @app.post("/ask")
 def ask(req: AskRequest):
@@ -21,7 +22,8 @@ def ask(req: AskRequest):
         "http://generator:8002/generate",
         json={
             "query": req.query,
-            "context": context
+            "context": context,
+            "llm": req.llm
         }
     )
     return generator_res.json()

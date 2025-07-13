@@ -3,7 +3,7 @@ FROM python:3.11-slim
 WORKDIR /app
 COPY app.py .
 
-RUN pip install --no-cache-dir fastapi uvicorn pydantic
+RUN pip install --no-cache-dir fastapi uvicorn pydantic python-dotenv google-generativeai
 
 EXPOSE 8002
 

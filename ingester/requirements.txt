@@ -1,0 +1,7 @@
+numpy<2.0
+fastapi
+uvicorn
+python-multipart
+faiss-cpu==1.7.4
+pymupdf
+sentence-transformers
