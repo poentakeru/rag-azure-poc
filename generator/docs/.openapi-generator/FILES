@@ -1,0 +1,7 @@
+.openapi-generator-ignore
+Apis/DefaultApi.md
+Models/GenerateRequest.md
+Models/HTTPValidationError.md
+Models/ValidationError.md
+Models/ValidationError_loc_inner.md
+README.md
