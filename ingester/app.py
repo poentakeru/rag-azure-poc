@@ -5,7 +5,6 @@ import fitz # PyMuPDF
 from sentence_transformers import SentenceTransformer
 import numpy as np
 import faiss
-import uuid
 
 app = FastAPI()
 
@@ -80,8 +79,8 @@ async def upload_file(file: UploadFile = File(...)):
             except Exception as e:
                 return JSONResponse(
                     status_code=400,
-                    content={"error": f"pdf文書をマークダウンに変換する処理に失敗しました。"}
-        )
+                    content={"error": "pdf文書をマークダウンに変換する処理に失敗しました。"}
+                )
         # =========================
         # 2. embedding
         # =========================
