@@ -11,11 +11,12 @@ class AskRequest(BaseModel):
 @app.post("/ask")
 def ask(req: AskRequest):
     # Step 1: retrieverに問い合わせ
-    retriever_res = requests.post(
-        "http://retriever:8001/retrieve",
+    res = requests.post(
+        "http://retriever:8001/search",
         json={"query": req.query}
     )
-    context = retriever_res.json().get("context", "")
+    chunks = res.json().get("chunks", [])
+    context = "\n".join(chunks)
 
     # Step 2: generator に問い合わせ
     generator_res = requests.post(

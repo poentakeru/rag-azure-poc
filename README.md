@@ -36,6 +36,8 @@
 docker compose up --build
 ```
 
+実行前に `.env.example` を `.env` にコピーし、`GOOGLE_API_KEY` を設定してください。
+
 起動後、以下にアクセス：
 
 UI: http://localhost:8501
@@ -131,6 +133,8 @@ graph TD
 | `vector-db`  | 8003 | ベクトル格納・検索（FAISS） | 内部利用        |
 | `ingester`   | 8005 | ファイルアップロード＋整形    | `/upload`   |
 
+アップロードされたファイルや生成されたベクトルは `ingester` コンテナ内の `/app/uploads` に保存されます。ここには `index.faiss` と `chunks.json` が作成され、`retriever` はこれらのファイルを読み込んで検索を行います。
+
 ## 🔐 .env ファイルの取り扱い
 このプロジェクトでは、APIキーやトークンなどの機密情報を .env ファイルで管理しています。
 
@@ -147,3 +151,4 @@ graph TD
 # .env.example の例
 GOOGLE_API_KEY=your_api_key_here
 ```
+`generator` サービスを利用するには、上記のファイルを `.env` にコピーし、実際の API キーを設定してください。
