@@ -1,7 +1,8 @@
 from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import JSONResponse
 import os
-import fitz # PyMuPDF
+import json
+import fitz  # PyMuPDF
 from sentence_transformers import SentenceTransformer
 import numpy as np
 import faiss
@@ -17,6 +18,17 @@ index = faiss.IndexFlatL2(dimension)
 default_max_length = 300
 default_top_k = 3
 chunk_store = {}
+
+UPLOAD_DIR = "/app/uploads"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+INDEX_PATH = os.path.join(UPLOAD_DIR, "index.faiss")
+CHUNK_PATH = os.path.join(UPLOAD_DIR, "chunks.json")
+
+if os.path.exists(INDEX_PATH):
+    index = faiss.read_index(INDEX_PATH)
+if os.path.exists(CHUNK_PATH):
+    with open(CHUNK_PATH) as f:
+        chunk_store = {int(k): v for k, v in json.load(f).items()}
 
 
 # チャンク分割（目安: 300文字）
@@ -36,13 +48,7 @@ def to_markdown(text):
     return f"```\n{text.strip()}```"
 
 
-UPLOAD_DIR = "/app/uploads"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
-
 ALLOWED_EXTENSIONS = {".pdf", ".md", ".txt", ".docx"}
-
-
-
 @app.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
     _, ext = os.path.splitext(file.filename)
@@ -108,10 +114,15 @@ async def upload_file(file: UploadFile = File(...)):
         for i, chunk in enumerate(chunks):
             chunk_store[start_id + i] = chunk
 
+        # 状態をファイルに保存
+        faiss.write_index(index, INDEX_PATH)
+        with open(CHUNK_PATH, "w") as f:
+            json.dump({str(k): v for k, v in chunk_store.items()}, f, ensure_ascii=False)
+
         return JSONResponse({
-            "message": "アップロード・登録完了", 
+            "message": "アップロード・登録完了",
             "chunks": len(chunks)
-            })
+        })
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
     
@@ -119,10 +130,21 @@ async def upload_file(file: UploadFile = File(...)):
 @app.get("/search")
 def search(query: str, top_k: int = default_top_k):
     try:
+        # 最新のインデックスを読み込み
+        if os.path.exists(INDEX_PATH):
+            loaded = faiss.read_index(INDEX_PATH)
+        else:
+            loaded = index
+        if os.path.exists(CHUNK_PATH):
+            with open(CHUNK_PATH) as f:
+                loaded_store = {int(k): v for k, v in json.load(f).items()}
+        else:
+            loaded_store = chunk_store
+
         query_vec = embedding_model.encode([query])
-        D, I = index.search(query_vec, top_k)
+        D, I = loaded.search(np.array(query_vec).astype("float32"), top_k)
         results = [
-            chunk_store.get(i, "不明") for i in I[0]
+            loaded_store.get(i, "不明") for i in I[0]
         ]
         return {"query": query, "results": results}
     except Exception as e:

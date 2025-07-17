@@ -1,9 +1,10 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from pydantic import BaseModel
 import os
 import google.generativeai as genai
 from dotenv import load_dotenv
 
+load_dotenv()
 api_key = os.getenv("GOOGLE_API_KEY")
 genai.configure(api_key=api_key)
 gemini_model = genai.GenerativeModel("gemini-2.0-flash-lite")
