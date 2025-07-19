@@ -2,3 +2,4 @@
 test_gemini.py
 # 環境変数ファイル（機密情報）
 generator/.env
+
